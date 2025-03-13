@@ -22,12 +22,12 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      initialRoute: '/home',
+      initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const SignupPage(),
         '/home': (context) => const Homepage(),
-        '/booking': (context) => const BookingsPage()
+        '/booking': (context) => const BookingsPage(),
       },
       debugShowCheckedModeBanner: false,
     );

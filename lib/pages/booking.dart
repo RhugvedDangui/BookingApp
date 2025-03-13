@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BookingsPage extends StatefulWidget {
   final String? initialPlaceName;
-  
-  const BookingsPage({
-    super.key,
-    this.initialPlaceName,
-  });
+
+  const BookingsPage({super.key, this.initialPlaceName});
 
   @override
   State<BookingsPage> createState() => _BookingsPageState();
@@ -19,14 +17,19 @@ class _BookingsPageState extends State<BookingsPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _placeNameController;
   late TextEditingController _descriptionController;
-  DateTime _selectedDate = DateTime.now();
+  DateTime _fromDate = DateTime.now();
+  DateTime _toDate = DateTime.now();
   TimeOfDay _startTime = TimeOfDay.now();
-  TimeOfDay _endTime = TimeOfDay.now().replacing(hour: TimeOfDay.now().hour + 1);
-  
+  TimeOfDay _endTime = TimeOfDay.now().replacing(
+    hour: TimeOfDay.now().hour + 1,
+  );
+
   @override
   void initState() {
     super.initState();
-    _placeNameController = TextEditingController(text: widget.initialPlaceName ?? '');
+    _placeNameController = TextEditingController(
+      text: widget.initialPlaceName ?? '',
+    );
     _descriptionController = TextEditingController();
   }
 
@@ -37,16 +40,22 @@ class _BookingsPageState extends State<BookingsPage> {
     super.dispose();
   }
 
-  Future<void> _selectDate(BuildContext context) async {
+  Future<void> _selectDate(BuildContext context, bool isFromDate) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: isFromDate ? _fromDate : _toDate,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (picked != null && picked != _selectedDate) {
+    if (picked != null) {
       setState(() {
-        _selectedDate = picked;
+        if (isFromDate) {
+          _fromDate = picked;
+          // Automatically set the to date to the same date as the from date
+          _toDate = picked;
+        } else {
+          _toDate = picked;
+        }
       });
     }
   }
@@ -72,14 +81,56 @@ class _BookingsPageState extends State<BookingsPage> {
     }
   }
 
+  // Function to submit the booking details to Firestore
+  Future<void> _submitBooking() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        // Format the dates to remove time part (store only date)
+        String formattedFromDate = DateFormat('yyyy-MM-dd').format(_fromDate);
+        String formattedToDate = DateFormat('yyyy-MM-dd').format(_toDate);
+
+        // Add data to Firestore
+        await FirebaseFirestore.instance.collection('bookings').add({
+          'placeName': _placeNameController.text,
+          'fromDate': formattedFromDate, // Save only the date
+          'toDate': formattedToDate, // Save only the date
+          'startTime': _startTime.format(context),
+          'endTime': _endTime.format(context),
+          'description': _descriptionController.text,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+
+        // Clear the form fields after successful submission
+        setState(() {
+          _placeNameController.clear();
+          _descriptionController.clear();
+          _fromDate = DateTime.now();
+          _toDate = DateTime.now();
+          _startTime = TimeOfDay.now();
+          _endTime = TimeOfDay.now().replacing(hour: TimeOfDay.now().hour + 1);
+        });
+
+        // Provide feedback
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Booking successfully submitted!')),
+        );
+
+        // Optional: Navigate to another page or reset the page state after success
+        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => AnotherPage()));
+      } catch (e) {
+        // Provide error feedback
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Book a Place')
-          .animate()
-          .fadeIn()
-          .slideX(),
+        title: const Text('Book a Place').animate().fadeIn().slideX(),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -124,9 +175,9 @@ class _BookingsPageState extends State<BookingsPage> {
                   ),
                 ),
               ).animate().scale(),
-              
+
               const SizedBox(height: 16),
-              
+
               Card(
                 elevation: 4,
                 shape: RoundedRectangleBorder(
@@ -143,17 +194,33 @@ class _BookingsPageState extends State<BookingsPage> {
                       ).animate().fadeIn().slideX(),
                       const SizedBox(height: 16),
                       InkWell(
-                        onTap: () => _selectDate(context),
+                        onTap: () => _selectDate(context, true),
                         child: InputDecorator(
                           decoration: InputDecoration(
-                            labelText: 'Date',
+                            labelText: 'From Date',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                             prefixIcon: const Icon(Icons.calendar_today),
                           ),
                           child: Text(
-                            DateFormat('EEEE, MMMM d, y').format(_selectedDate),
+                            DateFormat('EEEE, MMMM d, y').format(_fromDate),
+                          ),
+                        ),
+                      ).animate().fadeIn().slideX(),
+                      const SizedBox(height: 16),
+                      InkWell(
+                        onTap: () => _selectDate(context, false),
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                            labelText: 'To Date',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            prefixIcon: const Icon(Icons.calendar_today),
+                          ),
+                          child: Text(
+                            DateFormat('EEEE, MMMM d, y').format(_toDate),
                           ),
                         ),
                       ).animate().fadeIn().slideX(),
@@ -197,9 +264,9 @@ class _BookingsPageState extends State<BookingsPage> {
                   ),
                 ),
               ).animate().scale(),
-              
+
               const SizedBox(height: 16),
-              
+
               Card(
                 elevation: 4,
                 shape: RoundedRectangleBorder(
@@ -217,37 +284,27 @@ class _BookingsPageState extends State<BookingsPage> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _descriptionController,
-                        maxLines: 3,
                         decoration: InputDecoration(
-                          labelText: 'Description',
-                          hintText: 'Add any special requirements or notes for the admin',
+                          labelText: 'Description (Optional)',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                           prefixIcon: const Icon(Icons.description),
                         ),
+                        maxLines: 3,
                       ).animate().fadeIn().slideX(),
                     ],
                   ),
                 ),
               ).animate().scale(),
-              
-              const SizedBox(height: 24),
-              
+
+              const SizedBox(height: 32),
+
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      // TODO: Implement booking submission
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Processing booking...'),
-                        ),
-                      );
-                    }
-                  },
+                  onPressed: _submitBooking,
                   style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

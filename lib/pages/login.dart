@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:test01/pages/booking.dart';
 import 'package:test01/pages/homepage.dart';
+import 'package:test01/pages/booking.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -48,43 +50,75 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   // Login Button Clicked
   void handleLogin() async {
-  String email = emailController.text;
-  String password = passwordController.text;
+    String email = emailController.text;
+    String password = passwordController.text;
 
-  try {
-    // Sign in the user
-    UserCredential userCredential = await FirebaseAuth.instance
-        .signInWithEmailAndPassword(email: email, password: password);
+    try {
+      // Sign in the user
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
 
-    // Check if email is verified
-    if (userCredential.user?.emailVerified ?? false) {
-      // If email is verified, navigate to the home page or dashboard
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const Homepage()), // Change to your home page
-      );
-    } else {
-      // If email is not verified, show an alert
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please verify your email before logging in.')),
-      );
+      // Check if email is verified
+      if (userCredential.user?.emailVerified ?? false) {
+        // If email is verified, navigate to the home page or dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const BookingsPage()), // Change to your home page
+        );
+      } else {
+        // If email is not verified, show an alert
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please verify your email before logging in.')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      // Handle errors
+      if (e.code == 'user-not-found') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No user found with that email.')),
+        );
+      } else if (e.code == 'wrong-password') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Incorrect password.')),
+        );
+      }
+    } catch (e) {
+      print(e);
     }
-  } on FirebaseAuthException catch (e) {
-    // Handle errors
-    if (e.code == 'user-not-found') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No user found with that email.')),
-      );
-    } else if (e.code == 'wrong-password') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Incorrect password.')),
-      );
-    }
-  } catch (e) {
-    print(e);
   }
-}
 
+  // Forgot Password functionality
+  void handleForgotPassword() async {
+    String email = emailController.text;
+    if (email.isEmpty) {
+      // Show error if email is not entered
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter your email address')),
+      );
+      return;
+    }
+
+    try {
+      // Send password reset email
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Password reset email sent! Check your inbox.')),
+      );
+    } on FirebaseAuthException catch (e) {
+      // Handle errors
+      if (e.code == 'user-not-found') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No user found with that email.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.message}')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -236,7 +270,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () => (),
+                  onPressed: handleForgotPassword, // Call handleForgotPassword function
                   child: const Text(
                     'Forgot Password?',
                     style: TextStyle(
