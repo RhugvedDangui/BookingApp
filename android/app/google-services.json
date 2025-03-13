@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "175024168085",
+    "project_id": "audifinal",
+    "storage_bucket": "audifinal.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:175024168085:android:eee36f09edd4a101ebcf9c",
+        "android_client_info": {
+          "package_name": "com.example.test01"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPMqO3kSEVYynFtulJ54phIR6vjZc9ojg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
