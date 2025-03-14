@@ -1,8 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:test01/pages/booking.dart';
 import 'package:test01/pages/homepage.dart';
-import 'package:test01/pages/booking.dart';
+import 'package:test01/providers/user_provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,28 +14,20 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   TabController? tabController;
-  bool isEmailSelected = true; // Track active tab
+  bool isEmailSelected = true;
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
   final passwordController = TextEditingController();
 
-  final Color buttonColor = Color.fromARGB(
-    255,
-    177,
-    95,
-    191,
-  ); // Color for button (matching icons)
+  final Color buttonColor = Color.fromARGB(255, 177, 95, 191);
 
   @override
   void initState() {
     super.initState();
     tabController = TabController(length: 2, vsync: this);
-
-    // Listen for tab changes
     tabController?.addListener(() {
       setState(() {
-        isEmailSelected =
-            tabController?.index == 0; // Check which tab is active
+        isEmailSelected = tabController?.index == 0;
       });
     });
   }
@@ -48,50 +41,82 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // Login Button Clicked
   void handleLogin() async {
-    String email = emailController.text;
+    String email = emailController.text.trim();
     String password = passwordController.text;
 
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both email and password')),
+      );
+      return;
+    }
+
     try {
-      // Sign in the user
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
 
-      // Check if email is verified
       if (userCredential.user?.emailVerified ?? false) {
-        // If email is verified, navigate to the home page or dashboard
+        Provider.of<UserProvider>(context, listen: false).setUser(email);
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const BookingsPage()), // Change to your home page
+          MaterialPageRoute(builder: (context) => const Homepage()),
         );
       } else {
-        // If email is not verified, show an alert
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Please verify your email before logging in.')),
+          const SnackBar(
+            content: Text('Please verify your email before logging in.'),
+          ),
         );
       }
     } on FirebaseAuthException catch (e) {
-      // Handle errors
-      if (e.code == 'user-not-found') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No user found with that email.')),
-        );
-      } else if (e.code == 'wrong-password') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Incorrect password.')),
-        );
+      print('FirebaseAuthException: ${e.code} - ${e.message}');
+      switch (e.code) {
+        case 'user-not-found':
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No user found with that email.')),
+          );
+          break;
+        case 'wrong-password':
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Incorrect password.')));
+          break;
+        case 'invalid-email':
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid email format.')),
+          );
+          break;
+        case 'user-disabled':
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This user account has been disabled.'),
+            ),
+          );
+          break;
+        case 'too-many-requests':
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Too many attempts. Please try again later.'),
+            ),
+          );
+          break;
+        default:
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Login failed: ${e.message}')));
       }
     } catch (e) {
-      print(e);
+      print('Unexpected error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An unexpected error occurred: $e')),
+      );
     }
   }
 
-  // Forgot Password functionality
   void handleForgotPassword() async {
     String email = emailController.text;
     if (email.isEmpty) {
-      // Show error if email is not entered
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please enter your email address')),
       );
@@ -99,23 +124,19 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     }
 
     try {
-      // Send password reset email
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Password reset email sent! Check your inbox.')),
       );
     } on FirebaseAuthException catch (e) {
-      // Handle errors
       if (e.code == 'user-not-found') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('No user found with that email.')),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
       }
     }
   }
@@ -129,8 +150,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           child: Column(
             children: [
               const SizedBox(height: 100),
-
-              // Heading
               Container(
                 alignment: Alignment.topLeft,
                 child: Column(
@@ -154,10 +173,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   ],
                 ),
               ),
-
               const SizedBox(height: 20),
-
-              // Tab Bar
               TabBar(
                 controller: tabController,
                 tabs: [
@@ -183,9 +199,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   ),
                 ],
               ),
-
-              const SizedBox(height: 10), // Reduced gap
-              // Dynamic Form Fields
+              const SizedBox(height: 10),
               if (isEmailSelected)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,11 +251,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     ),
                   ],
                 ),
-
-              const SizedBox(height: 10), // Reduced gap between fields
-              // Password Field (Common for both tabs)
+              const SizedBox(height: 10),
               Align(
-                alignment: Alignment.centerLeft, // Align text to left
+                alignment: Alignment.centerLeft,
                 child: const Padding(
                   padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
                   child: Text(
@@ -263,14 +275,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 ),
                 obscureText: true,
               ),
-
               const SizedBox(height: 20),
-
-              // Forgot Password
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: handleForgotPassword, // Call handleForgotPassword function
+                  onPressed: handleForgotPassword,
                   child: const Text(
                     'Forgot Password?',
                     style: TextStyle(
@@ -280,29 +289,19 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-
-              // Sign Up
               Row(
                 children: [
                   const Text("Don't have an account?"),
-                  TextButton(
-                    onPressed: () {
-                      // Navigate to register page
-                    },
-                    child: const Text('Sign Up'),
-                  ),
+                  TextButton(onPressed: () {}, child: const Text('Sign Up')),
                 ],
               ),
-
               const SizedBox(height: 25),
-
-              // Login Button
               Center(
                 child: ElevatedButton(
-                  onPressed: handleLogin, // Call handleLogin function
+                  onPressed: handleLogin,
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(200, 50),
-                    backgroundColor: buttonColor, // Set the button color here
+                    backgroundColor: buttonColor,
                   ),
                   child: const Text('Login'),
                 ),

@@ -3,6 +3,8 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import 'package:test01/providers/user_provider.dart';
 
 class BookingsPage extends StatefulWidget {
   final String? initialPlaceName;
@@ -51,7 +53,6 @@ class _BookingsPageState extends State<BookingsPage> {
       setState(() {
         if (isFromDate) {
           _fromDate = picked;
-          // Automatically set the to date to the same date as the from date
           _toDate = picked;
         } else {
           _toDate = picked;
@@ -69,7 +70,6 @@ class _BookingsPageState extends State<BookingsPage> {
       setState(() {
         if (isStart) {
           _startTime = picked;
-          // Automatically set end time to 1 hour after start time
           _endTime = TimeOfDay(
             hour: (picked.hour + 1) % 24,
             minute: picked.minute,
@@ -81,22 +81,27 @@ class _BookingsPageState extends State<BookingsPage> {
     }
   }
 
-  // Function to submit the booking details to Firestore
   Future<void> _submitBooking() async {
     if (_formKey.currentState!.validate()) {
       try {
+        // Get the user's email from UserProvider
+        final userEmail =
+            Provider.of<UserProvider>(context, listen: false).userEmail ??
+            'unknown';
+
         // Format the dates to remove time part (store only date)
         String formattedFromDate = DateFormat('yyyy-MM-dd').format(_fromDate);
         String formattedToDate = DateFormat('yyyy-MM-dd').format(_toDate);
 
-        // Add data to Firestore
+        // Add data to Firestore including the user's email
         await FirebaseFirestore.instance.collection('bookings').add({
           'placeName': _placeNameController.text,
-          'fromDate': formattedFromDate, // Save only the date
-          'toDate': formattedToDate, // Save only the date
+          'fromDate': formattedFromDate,
+          'toDate': formattedToDate,
           'startTime': _startTime.format(context),
           'endTime': _endTime.format(context),
           'description': _descriptionController.text,
+          'userEmail': userEmail,
           'timestamp': FieldValue.serverTimestamp(),
         });
 
@@ -110,15 +115,10 @@ class _BookingsPageState extends State<BookingsPage> {
           _endTime = TimeOfDay.now().replacing(hour: TimeOfDay.now().hour + 1);
         });
 
-        // Provide feedback
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Booking successfully submitted!')),
         );
-
-        // Optional: Navigate to another page or reset the page state after success
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => AnotherPage()));
       } catch (e) {
-        // Provide error feedback
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));

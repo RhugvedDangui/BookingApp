@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-// import 'package:bookingapp/pages/bookings.dart';
-// import 'package:bookingapp/pages/notifications.dart';
-// import 'package:bookingapp/pages/placedetailpage.dart';
-// import 'package:bookingapp/pages/settings.dart';
-// import 'package:bookingapp/utils/bottom_Nav.dart';
 import 'package:test01/pages/utils/bottom_nav.dart';
 import 'package:test01/pages/utils/placeDetails.dart';
+import 'package:test01/pages/booking.dart'; // Import BookingsPage
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -44,12 +40,12 @@ class _HomepageState extends State<Homepage> {
     {"place": "L11"},
   ];
 
-  final List<Widget> _pages = [];
+  late List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
-    _pages.add(
+    _pages = [
       SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -389,8 +385,8 @@ class _HomepageState extends State<Homepage> {
           ),
         ),
       ),
-    );
-    // _pages.addAll([BookingsPage(), Notifications(), SettingsPage()]);
+      const BookingsPage(), // Add BookingsPage to the navigation
+    ];
   }
 
   @override

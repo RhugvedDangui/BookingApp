@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:test01/pages/login.dart';
+import 'package:test01/pages/login.dart'; // Adjust import path as needed
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -14,76 +15,113 @@ class _SignupPageState extends State<SignupPage> {
   bool isAdmin = false;
   bool obscurePassword = true;
   bool obscureConfirmPassword = true;
+  bool isLoading = false;
 
-  // Declare controllers for each field to get their values
+  // Controllers for form fields
   TextEditingController fullNameController = TextEditingController();
   TextEditingController emailController = TextEditingController();
   TextEditingController phoneController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController confirmPasswordController = TextEditingController();
 
-  // Function to handle the sign-up logic
-  void handleSignUp() async {
-  if (_formKey.currentState?.validate() ?? false) {
-    String fullName = fullNameController.text;
-    String email = emailController.text;
-    String phone = phoneController.text;
-    String password = passwordController.text;
-    String confirmPassword = confirmPasswordController.text;
-    bool userType = isAdmin; // Get the user type (Admin or User)
+  Future<void> handleSignUp() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      setState(() => isLoading = true);
 
-    // Check if passwords match
-    if (password != confirmPassword) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Passwords do not match")));
-      return;
-    }
+      String fullName = fullNameController.text;
+      String email = emailController.text;
+      String phone = phoneController.text;
+      String password = passwordController.text;
+      String confirmPassword = confirmPasswordController.text;
 
-    try {
-      // Firebase email and password authentication
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
-
-      // Send email verification
-      await userCredential.user?.sendEmailVerification();
-
-      // You can now save user details in Firebase Firestore or another database if necessary
-      print('User created with email: $email');
-      print('Full Name: $fullName');
-      print('Phone: $phone');
-      print('Is Admin: $userType');
-
-      // Inform the user to verify their email
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please check your email to verify your account.')),
-      );
-
-      // Optionally, if you want to verify phone number, you can use Firebase phone authentication
-
-      // After successful sign-up, navigate to the login page or home page
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginPage()),
-      );
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'weak-password') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('The password provided is too weak.')),
-        );
-      } else if (e.code == 'email-already-in-use') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('The account already exists for that email.'),
-          ),
-        );
+      if (password != confirmPassword) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Passwords do not match")));
+        }
+        setState(() => isLoading = false);
+        return;
       }
-    } catch (e) {
-      print(e);
+
+      try {
+        // Create user with email and password
+        UserCredential userCredential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(email: email, password: password);
+
+        // Send email verification
+        await userCredential.user?.sendEmailVerification();
+
+        // Save user data to Firestore immediately
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+              'fullName': fullName,
+              'email': email,
+              'phone': phone,
+              'isAdmin': isAdmin,
+              'createdAt': FieldValue.serverTimestamp(),
+              'lastLogin': FieldValue.serverTimestamp(),
+            });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Account created! Please check your email to verify.',
+              ),
+            ),
+          );
+          // Redirect to login page immediately
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        String message;
+        switch (e.code) {
+          case 'weak-password':
+            message = 'The password provided is too weak.';
+            break;
+          case 'email-already-in-use':
+            message = 'The account already exists for that email.';
+            break;
+          case 'invalid-email':
+            message = 'The email address is not valid.';
+            break;
+          default:
+            message = 'An error occurred. Please try again.';
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('An unexpected error occurred: $e')),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => isLoading = false);
+        }
+      }
     }
   }
-}
 
+  @override
+  void dispose() {
+    fullNameController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -196,7 +234,6 @@ class _SignupPageState extends State<SignupPage> {
                         ],
                       ),
                     ),
-
                     SizedBox(height: 30),
 
                     // Full Name
@@ -228,7 +265,6 @@ class _SignupPageState extends State<SignupPage> {
                         return null;
                       },
                     ),
-
                     SizedBox(height: 20),
 
                     // Email
@@ -257,10 +293,14 @@ class _SignupPageState extends State<SignupPage> {
                         if (value?.isEmpty ?? true) {
                           return 'Please enter your email';
                         }
+                        if (!RegExp(
+                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                        ).hasMatch(value!)) {
+                          return 'Please enter a valid email';
+                        }
                         return null;
                       },
                     ),
-
                     SizedBox(height: 20),
 
                     // Phone Number
@@ -290,10 +330,12 @@ class _SignupPageState extends State<SignupPage> {
                         if (value?.isEmpty ?? true) {
                           return 'Please enter your phone number';
                         }
+                        if (!RegExp(r'^\d{10}$').hasMatch(value!)) {
+                          return 'Please enter a valid 10-digit phone number';
+                        }
                         return null;
                       },
                     ),
-
                     SizedBox(height: 20),
 
                     // Password
@@ -335,10 +377,12 @@ class _SignupPageState extends State<SignupPage> {
                         if (value?.isEmpty ?? true) {
                           return 'Please enter a password';
                         }
+                        if (value!.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
                         return null;
                       },
                     ),
-
                     SizedBox(height: 20),
 
                     // Confirm Password
@@ -388,18 +432,18 @@ class _SignupPageState extends State<SignupPage> {
                         return null;
                       },
                     ),
-
                     SizedBox(height: 30),
 
                     // Sign Up Button
                     ElevatedButton(
-                      onPressed: handleSignUp,
-                      child: Text(
-                        'Sign Up',
-                        style: TextStyle(
-                          color: Colors.white,
-                        ), // Set text color to white
-                      ),
+                      onPressed: isLoading ? null : handleSignUp,
+                      child:
+                          isLoading
+                              ? CircularProgressIndicator(color: Colors.white)
+                              : Text(
+                                'Sign Up',
+                                style: TextStyle(color: Colors.white),
+                              ),
                       style: ElevatedButton.styleFrom(
                         minimumSize: Size(double.infinity, 50),
                         backgroundColor: Colors.deepPurple,
@@ -408,10 +452,9 @@ class _SignupPageState extends State<SignupPage> {
                         ),
                       ),
                     ),
-
                     SizedBox(height: 20),
 
-                    // Already have an account? Login
+                    // Login Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
