@@ -1,3 +1,4 @@
+// bottom_nav.dart
 import 'package:flutter/material.dart';
 
 class CustomBottomNav extends StatefulWidget {
@@ -21,11 +22,7 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            spreadRadius: 2,
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 10, spreadRadius: 2),
         ],
       ),
       child: BottomNavigationBar(
@@ -36,85 +33,87 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
         backgroundColor: Colors.white,
         elevation: 10,
         type: BottomNavigationBarType.fixed,
-        showUnselectedLabels:
-            false, // Hide unselected labels for a cleaner look
-        selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
-
+        showUnselectedLabels: false,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
         items: [
           BottomNavigationBarItem(
-            icon: widget.currentIndex == 0
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.home, size: 30),
-                      Container(
-                        width: 8,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: Colors.deepPurpleAccent,
-                          borderRadius: BorderRadius.circular(2),
+            icon:
+                widget.currentIndex == 0
+                    ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.home, size: 30),
+                        Container(
+                          width: 8,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurpleAccent,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                      ),
-                    ],
-                  )
-                : Icon(Icons.home_outlined, size: 26),
+                      ],
+                    )
+                    : const Icon(Icons.home_outlined, size: 26),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: widget.currentIndex == 1
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.book, size: 30),
-                      Container(
-                        width: 8,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: Colors.deepPurpleAccent,
-                          borderRadius: BorderRadius.circular(2),
+            icon:
+                widget.currentIndex == 1
+                    ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.book, size: 30),
+                        Container(
+                          width: 8,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurpleAccent,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                      ),
-                    ],
-                  )
-                : Icon(Icons.book_outlined, size: 26),
+                      ],
+                    )
+                    : const Icon(Icons.book_outlined, size: 26),
             label: 'Bookings',
           ),
           BottomNavigationBarItem(
-            icon: widget.currentIndex == 2
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.notifications, size: 30),
-                      Container(
-                        width: 8,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: Colors.deepPurpleAccent,
-                          borderRadius: BorderRadius.circular(2),
+            icon:
+                widget.currentIndex == 2
+                    ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.notifications, size: 30),
+                        Container(
+                          width: 8,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurpleAccent,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                      ),
-                    ],
-                  )
-                : Icon(Icons.notifications_none_outlined, size: 26),
-            label: 'Notifications',
+                      ],
+                    )
+                    : const Icon(Icons.notifications_none_outlined, size: 26),
+            label: 'Booking List', // Changed to reflect purpose
           ),
           BottomNavigationBarItem(
-            icon: widget.currentIndex == 3
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.settings, size: 30),
-                      Container(
-                        width: 8,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: Colors.deepPurpleAccent,
-                          borderRadius: BorderRadius.circular(2),
+            icon:
+                widget.currentIndex == 3
+                    ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.settings, size: 30),
+                        Container(
+                          width: 8,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurpleAccent,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                      ),
-                    ],
-                  )
-                : Icon(Icons.settings_outlined, size: 26),
+                      ],
+                    )
+                    : const Icon(Icons.settings_outlined, size: 26),
             label: 'Settings',
           ),
         ],

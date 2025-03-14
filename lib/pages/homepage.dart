@@ -1,7 +1,9 @@
+// homepage.dart
 import 'package:flutter/material.dart';
 import 'package:test01/pages/utils/bottom_nav.dart';
 import 'package:test01/pages/utils/placeDetails.dart';
-import 'package:test01/pages/booking.dart'; // Import BookingsPage
+import 'package:test01/pages/booking.dart';
+import 'package:test01/pages/booking_list.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -16,6 +18,7 @@ class _HomepageState extends State<Homepage> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      print('Navigated to index: $index'); // Debug print
     });
   }
 
@@ -73,7 +76,7 @@ class _HomepageState extends State<Homepage> {
                       BoxShadow(
                         color: Colors.deepPurple.withOpacity(0.3),
                         blurRadius: 10,
-                        offset: Offset(0, 4),
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -91,7 +94,7 @@ class _HomepageState extends State<Homepage> {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
                             'User',
                             style: TextStyle(
@@ -103,8 +106,8 @@ class _HomepageState extends State<Homepage> {
                         ],
                       ),
                       Container(
-                        padding: EdgeInsets.all(3),
-                        decoration: BoxDecoration(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
@@ -122,11 +125,12 @@ class _HomepageState extends State<Homepage> {
                   ),
                 ),
 
-                SizedBox(height: 25),
+                const SizedBox(height: 25),
 
                 // Search Bar
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(15),
@@ -135,7 +139,7 @@ class _HomepageState extends State<Homepage> {
                   child: Row(
                     children: [
                       Icon(Icons.search, color: Colors.grey.shade600),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: TextField(
                           decoration: InputDecoration(
@@ -149,7 +153,7 @@ class _HomepageState extends State<Homepage> {
                   ),
                 ),
 
-                SizedBox(height: 25),
+                const SizedBox(height: 25),
 
                 // Places Grid
                 Text(
@@ -160,7 +164,7 @@ class _HomepageState extends State<Homepage> {
                     color: Colors.black87,
                   ),
                 ),
-                SizedBox(height: 15),
+                const SizedBox(height: 15),
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
@@ -169,8 +173,9 @@ class _HomepageState extends State<Homepage> {
                     height: (places.length / 2).ceil() * 120.0,
                     child: GridView.builder(
                       shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         crossAxisSpacing: 15,
                         mainAxisSpacing: 15,
@@ -183,10 +188,9 @@ class _HomepageState extends State<Homepage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder:
-                                    (context) => PlaceDetailPage(
-                                      placeName: places[index]['place']!,
-                                    ),
+                                builder: (context) => PlaceDetailPage(
+                                  placeName: places[index]['place']!,
+                                ),
                               ),
                             );
                           },
@@ -205,7 +209,7 @@ class _HomepageState extends State<Homepage> {
                                 BoxShadow(
                                   color: Colors.deepPurple.withOpacity(0.2),
                                   blurRadius: 8,
-                                  offset: Offset(0, 3),
+                                  offset: const Offset(0, 3),
                                 ),
                               ],
                             ),
@@ -213,15 +217,15 @@ class _HomepageState extends State<Homepage> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.place,
                                   color: Colors.white,
                                   size: 24,
                                 ),
-                                SizedBox(height: 8),
+                                const SizedBox(height: 8),
                                 Text(
                                   places[index]['place']!,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
@@ -237,7 +241,7 @@ class _HomepageState extends State<Homepage> {
                   ),
                 ),
 
-                SizedBox(height: 25),
+                const SizedBox(height: 25),
 
                 // Bookings Section
                 Row(
@@ -263,139 +267,157 @@ class _HomepageState extends State<Homepage> {
                     ),
                   ],
                 ),
-                SizedBox(height: 15),
+                const SizedBox(height: 15),
 
                 SizedBox(
                   height: bookings.isNotEmpty ? bookings.length * 100.0 : 100.0,
-                  child: Container(
-                    child:
-                        bookings.isEmpty
-                            ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.event_busy,
-                                    size: 40,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                  SizedBox(height: 10),
-                                  Text(
-                                    'No bookings for today',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey.shade600,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
+                  child: bookings.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.event_busy,
+                                size: 40,
+                                color: Colors.grey.shade400,
                               ),
-                            )
-                            : ListView.builder(
-                              physics: NeverScrollableScrollPhysics(),
-                              itemCount: bookings.length,
-                              itemBuilder: (context, index) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12.0),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(15),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.grey.withOpacity(0.1),
-                                          spreadRadius: 1,
-                                          blurRadius: 8,
-                                          offset: Offset(0, 3),
-                                        ),
-                                      ],
+                              const SizedBox(height: 10),
+                              Text(
+                                'No bookings for today',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: bookings.length,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(15),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.1),
+                                      spreadRadius: 1,
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
                                     ),
-                                    padding: const EdgeInsets.all(15),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          padding: EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: Colors.deepPurple.shade50,
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                          child: Icon(
-                                            Icons.event,
-                                            color: Colors.deepPurpleAccent,
-                                            size: 24,
-                                          ),
-                                        ),
-                                        SizedBox(width: 15),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                bookings[index]['title']!,
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.black87,
-                                                ),
-                                              ),
-                                              SizedBox(height: 4),
-                                              Text(
-                                                bookings[index]['bookedBy']!,
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.grey.shade600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.deepPurple.shade50,
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            bookings[index]['time']!,
-                                            style: TextStyle(
-                                              color: Colors.deepPurpleAccent,
+                                  ],
+                                ),
+                                padding: const EdgeInsets.all(15),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.deepPurple.shade50,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.event,
+                                        color: Colors.deepPurpleAccent,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 15),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            bookings[index]['title']!,
+                                            style: const TextStyle(
+                                              fontSize: 16,
                                               fontWeight: FontWeight.w600,
-                                              fontSize: 14,
+                                              color: Colors.black87,
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            bookings[index]['bookedBy']!,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
-                            ),
-                  ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.deepPurple.shade50,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        bookings[index]['time']!,
+                                        style: const TextStyle(
+                                          color: Colors.deepPurpleAccent,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
           ),
         ),
       ),
-      const BookingsPage(), // Add BookingsPage to the navigation
+      const BookingsPage(),
+      const BookingListPage(),
+      const SettingsPage(),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: _pages),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: CustomBottomNav(
         currentIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
+      ),
+    );
+  }
+}
+
+class SettingsPage extends StatelessWidget {
+  const SettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Settings'),
+        backgroundColor: Colors.deepPurpleAccent,
+      ),
+      body: const Center(
+        child: Text(
+          'Settings Page',
+          style: TextStyle(fontSize: 20),
+        ),
       ),
     );
   }
