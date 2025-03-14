@@ -1,9 +1,11 @@
-// homepage.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:test01/pages/utils/bottom_nav.dart';
 import 'package:test01/pages/utils/placeDetails.dart';
 import 'package:test01/pages/booking.dart';
 import 'package:test01/pages/booking_list.dart';
+import 'package:test01/pages/settings.dart'; // Import the updated SettingsPage
+import 'package:test01/providers/user_provider.dart'; // Import UserProvider
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -59,78 +61,87 @@ class _HomepageState extends State<Homepage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Welcome Section
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.deepPurple.shade400,
-                        Colors.deepPurple.shade600,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.deepPurple.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome back,',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w500,
-                            ),
+                // Welcome Section with UserProvider
+                Consumer<UserProvider>(
+                  builder: (context, userProvider, child) {
+                    final userEmail = userProvider.userEmail ?? 'User';
+                    return Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.deepPurple.shade400,
+                            Colors.deepPurple.shade600,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.deepPurple.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'User',
-                            style: TextStyle(
-                              fontSize: 24,
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Welcome back,',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                userEmail.split(
+                                  '@',
+                                )[0], // Display name part of email
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(
                               color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                              shape: BoxShape.circle,
+                            ),
+                            child: CircleAvatar(
+                              radius: 22,
+                              backgroundColor: Colors.deepPurpleAccent,
+                              child: Icon(
+                                Icons.person,
+                                size: 28,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: CircleAvatar(
-                          radius: 22,
-                          backgroundColor: Colors.deepPurpleAccent,
-                          child: Icon(
-                            Icons.person,
-                            size: 28,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 25),
 
                 // Search Bar
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 15,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(15),
@@ -176,11 +187,11 @@ class _HomepageState extends State<Homepage> {
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 15,
-                        mainAxisSpacing: 15,
-                        childAspectRatio: 1.5,
-                      ),
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 15,
+                            mainAxisSpacing: 15,
+                            childAspectRatio: 1.5,
+                          ),
                       itemCount: places.length,
                       itemBuilder: (context, index) {
                         return GestureDetector(
@@ -188,9 +199,10 @@ class _HomepageState extends State<Homepage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => PlaceDetailPage(
-                                  placeName: places[index]['place']!,
-                                ),
+                                builder:
+                                    (context) => PlaceDetailPage(
+                                      placeName: places[index]['place']!,
+                                    ),
                               ),
                             );
                           },
@@ -256,7 +268,11 @@ class _HomepageState extends State<Homepage> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        setState(() {
+                          _selectedIndex = 2; // Navigate to BookingListPage
+                        });
+                      },
                       child: Text(
                         'See All',
                         style: TextStyle(
@@ -271,111 +287,116 @@ class _HomepageState extends State<Homepage> {
 
                 SizedBox(
                   height: bookings.isNotEmpty ? bookings.length * 100.0 : 100.0,
-                  child: bookings.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.event_busy,
-                                size: 40,
-                                color: Colors.grey.shade400,
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'No bookings for today',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey.shade600,
-                                  fontWeight: FontWeight.w500,
+                  child:
+                      bookings.isEmpty
+                          ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.event_busy,
+                                  size: 40,
+                                  color: Colors.grey.shade400,
                                 ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: bookings.length,
-                          itemBuilder: (context, index) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12.0),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(15),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.grey.withOpacity(0.1),
-                                      spreadRadius: 1,
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
+                                const SizedBox(height: 10),
+                                Text(
+                                  'No bookings for today',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey.shade600,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                                padding: const EdgeInsets.all(15),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: Colors.deepPurple.shade50,
-                                        borderRadius: BorderRadius.circular(12),
+                              ],
+                            ),
+                          )
+                          : ListView.builder(
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: bookings.length,
+                            itemBuilder: (context, index) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12.0),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(15),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.grey.withOpacity(0.1),
+                                        spreadRadius: 1,
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
                                       ),
-                                      child: const Icon(
-                                        Icons.event,
-                                        color: Colors.deepPurpleAccent,
-                                        size: 24,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 15),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            bookings[index]['title']!,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.black87,
-                                            ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(15),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.deepPurple.shade50,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
                                           ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            bookings[index]['bookedBy']!,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.deepPurple.shade50,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        bookings[index]['time']!,
-                                        style: const TextStyle(
+                                        ),
+                                        child: const Icon(
+                                          Icons.event,
                                           color: Colors.deepPurpleAccent,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
+                                          size: 24,
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 15),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              bookings[index]['title']!,
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              bookings[index]['bookedBy']!,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.deepPurple.shade50,
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          bookings[index]['time']!,
+                                          style: const TextStyle(
+                                            color: Colors.deepPurpleAccent,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
+                              );
+                            },
+                          ),
                 ),
               ],
             ),
@@ -384,40 +405,17 @@ class _HomepageState extends State<Homepage> {
       ),
       const BookingsPage(),
       const BookingListPage(),
-      const SettingsPage(),
+      const SettingsPage(), // Using the imported SettingsPage
     ];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: CustomBottomNav(
         currentIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
-      ),
-    );
-  }
-}
-
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        backgroundColor: Colors.deepPurpleAccent,
-      ),
-      body: const Center(
-        child: Text(
-          'Settings Page',
-          style: TextStyle(fontSize: 20),
-        ),
       ),
     );
   }

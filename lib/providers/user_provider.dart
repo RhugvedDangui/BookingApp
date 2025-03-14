@@ -1,13 +1,21 @@
-// user_provider.dart
 import 'package:flutter/material.dart';
 
 class UserProvider with ChangeNotifier {
-  String? _email;
+  String? _userEmail;
+  String? _userType;
 
-  String? get userEmail => _email; // Add this getter
+  String? get userEmail => _userEmail;
+  String? get userType => _userType;
 
   void setUser(String email) {
-    _email = email;
+    _userEmail = email;
+    _userType = 'User'; // Set dynamically if you have user type logic
+    notifyListeners();
+  }
+
+  void clearUser() {
+    _userEmail = null;
+    _userType = null;
     notifyListeners();
   }
 }
