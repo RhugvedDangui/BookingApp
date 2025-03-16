@@ -4,12 +4,14 @@ import 'package:provider/provider.dart';
 import 'package:test01/firebase_options.dart';
 import 'package:test01/pages/admin_requests.dart';
 import 'package:test01/pages/booking.dart';
-import 'package:test01/pages/homepage.dart';
+import 'package:test01/pages/homepage.dart'; // UserHomepage
 import 'package:test01/pages/login.dart';
 import 'package:test01/pages/register.dart';
 import 'package:test01/pages/settings.dart';
+import 'package:test01/pages/admin_homepage.dart';
 import 'package:test01/providers/user_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +34,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: AuthWrapper(), // Use AuthWrapper to determine initial screen
+      home: const AuthWrapper(),
       routes: {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const SignupPage(),
@@ -44,31 +46,97 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Widget to handle authentication state and routing
 class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  Future<bool> _isAdmin(String? email) async {
+    if (email == null) {
+      debugPrint('Email is null, returning false');
+      return false;
+    }
+    try {
+      debugPrint('Checking admin status for email: "$email"');
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(email.trim())
+          .get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data() as Map<String, dynamic>;
+        final isAdmin = data['isAdmin'] == true;
+        debugPrint('Firestore data for $email: $data');
+        debugPrint('isAdmin value: $isAdmin');
+        return isAdmin;
+      } else {
+        debugPrint('No document found for email: "$email"');
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          final uidDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+          if (uidDoc.exists) {
+            final uidData = uidDoc.data() as Map<String, dynamic>;
+            final isAdmin = uidData['isAdmin'] == true;
+            debugPrint('Firestore UID data for ${user.uid}: $uidData');
+            debugPrint('isAdmin value (UID): $isAdmin');
+            return isAdmin;
+          } else {
+            debugPrint('No document found for UID: ${user.uid}');
+          }
+        }
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Error checking admin status: $e');
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          // Show a loading screen while checking auth state
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
         if (snapshot.hasData) {
-          // User is signed in
           final user = snapshot.data!;
-          // Set the email in UserProvider
-          Provider.of<UserProvider>(
-            context,
-            listen: false,
-          ).setUser(user.email ?? '');
-          return const AdminRequestsPage(); // Navigate directly to BookingsPage
+          debugPrint('User signed in: "${user.email}"');
+
+          return FutureBuilder<bool>(
+            future: _isAdmin(user.email),
+            builder: (context, adminSnapshot) {
+              if (adminSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (adminSnapshot.hasError) {
+                debugPrint('Admin check error: ${adminSnapshot.error}');
+                return const UserHomepage();
+              }
+              final isAdmin = adminSnapshot.data ?? false;
+              debugPrint('Redirecting - isAdmin: $isAdmin');
+
+              Provider.of<UserProvider>(context, listen: false).setUser(
+                user.email ?? '',
+                isAdmin: isAdmin,
+              );
+
+              if (isAdmin) {
+                return const AdminHomepage();
+              } else {
+                return const UserHomepage();
+              }
+            },
+          );
         } else {
-          // User is not signed in
-          return const LoginPage(); // Show LoginPage
+          debugPrint('No user signed in, showing LoginPage');
+          return const LoginPage();
         }
       },
     );

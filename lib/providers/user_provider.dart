@@ -1,21 +1,28 @@
-  import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
-  class UserProvider with ChangeNotifier {
-    String? _userEmail;
-    String? _userType;
+class UserProvider with ChangeNotifier {
+  String? _userEmail;
+  bool _isAdmin = false;
+  String? _name;
 
-    String? get userEmail => _userEmail;
-    String? get userType => _userType;
+  String? get userEmail => _userEmail;
+  bool get isAdmin => _isAdmin;
+  String? get name => _name;
 
-    void setUser(String email) {
-      _userEmail = email;
-      _userType = 'User'; // Set dynamically if you have user type logic
-      notifyListeners();
-    }
-
-    void clearUser() {
-      _userEmail = null;
-      _userType = null;
-      notifyListeners();
-    }
+  void setUser(String email, {bool isAdmin = false, String? name}) {
+    _userEmail = email;
+    _isAdmin = isAdmin;
+    _name = name;
+    debugPrint(
+      'UserProvider - Set: email=$email, isAdmin=$isAdmin, name=$name',
+    );
+    notifyListeners();
   }
+
+  void clearUser() {
+    _userEmail = null;
+    _isAdmin = false;
+    _name = null;
+    notifyListeners();
+  }
+}

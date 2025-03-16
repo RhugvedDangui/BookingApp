@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:test01/pages/booking.dart';
 import 'package:test01/pages/admin_homepage.dart';
+import 'package:test01/pages/homepage.dart'; // Added UserHomepage
 import 'package:test01/providers/user_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -19,16 +21,18 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   final phoneController = TextEditingController();
   final passwordController = TextEditingController();
 
-  final Color buttonColor = Color.fromARGB(255, 177, 95, 191);
+  final Color buttonColor = const Color.fromARGB(255, 177, 95, 191);
 
   @override
   void initState() {
     super.initState();
     tabController = TabController(length: 2, vsync: this);
     tabController?.addListener(() {
-      setState(() {
-        isEmailSelected = tabController?.index == 0;
-      });
+      if (mounted) {
+        setState(() {
+          isEmailSelected = tabController?.index == 0;
+        });
+      }
     });
   }
 
@@ -41,14 +45,56 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  Future<bool> _isAdmin(String email) async {
+    try {
+      debugPrint('LoginPage - Checking admin status for email: "$email"');
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(email.trim())
+          .get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data() as Map<String, dynamic>;
+        final isAdmin = data['isAdmin'] == true;
+        debugPrint('LoginPage - Firestore data: $data');
+        debugPrint('LoginPage - isAdmin value: $isAdmin');
+        return isAdmin;
+      } else {
+        debugPrint('LoginPage - No document found for email: "$email"');
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          final uidDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+          if (uidDoc.exists) {
+            final uidData = uidDoc.data() as Map<String, dynamic>;
+            final isAdmin = uidData['isAdmin'] == true;
+            debugPrint('LoginPage - Firestore UID data for ${user.uid}: $uidData');
+            debugPrint('LoginPage - isAdmin value (UID): $isAdmin');
+            return isAdmin;
+          } else {
+            debugPrint('LoginPage - No document found for UID: ${user.uid}');
+          }
+        }
+        return false;
+      }
+    } catch (e) {
+      debugPrint('LoginPage - Error checking admin status: $e');
+      return false;
+    }
+  }
+
   void handleLogin() async {
     String email = emailController.text.trim();
     String password = passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both email and password')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter both email and password')),
+        );
+      }
       return;
     }
 
@@ -56,20 +102,39 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
 
+      if (!mounted) return;
+
       if (userCredential.user?.emailVerified ?? false) {
-        Provider.of<UserProvider>(context, listen: false).setUser(email);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AdminHomepage()),
+        bool isAdmin = await _isAdmin(email);
+        if (!mounted) return;
+
+        Provider.of<UserProvider>(context, listen: false).setUser(
+          email,
+          isAdmin: isAdmin,
         );
+
+        if (isAdmin) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminHomepage()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const UserHomepage()),
+          );
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please verify your email before logging in.'),
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please verify your email before logging in.'),
+            ),
+          );
+        }
       }
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       print('FirebaseAuthException: ${e.code} - ${e.message}');
       switch (e.code) {
         case 'user-not-found':
@@ -78,9 +143,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           );
           break;
         case 'wrong-password':
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Incorrect password.')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Incorrect password.')),
+          );
           break;
         case 'invalid-email':
           ScaffoldMessenger.of(context).showSnackBar(
@@ -102,11 +167,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           );
           break;
         default:
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Login failed: ${e.message}')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Login failed: ${e.message}')),
+          );
       }
     } catch (e) {
+      if (!mounted) return;
       print('Unexpected error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('An unexpected error occurred: $e')),
@@ -115,28 +181,34 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   }
 
   void handleForgotPassword() async {
-    String email = emailController.text;
+    String email = emailController.text.trim();
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter your email address')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter your email address')),
+        );
+      }
       return;
     }
 
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Password reset email sent! Check your inbox.')),
+        const SnackBar(
+          content: Text('Password reset email sent! Check your inbox.'),
+        ),
       );
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       if (e.code == 'user-not-found') {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No user found with that email.')),
+          const SnackBar(content: Text('No user found with that email.')),
         );
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.message}')),
+        );
       }
     }
   }
@@ -180,7 +252,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   Tab(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [
+                      children: const [
                         Icon(Icons.email),
                         SizedBox(width: 8),
                         Text('Email'),
@@ -190,7 +262,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   Tab(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [
+                      children: const [
                         Icon(Icons.phone),
                         SizedBox(width: 8),
                         Text('Phone Number'),
@@ -204,9 +276,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
-                      child: const Text(
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
+                      child: Text(
                         'Email',
                         style: TextStyle(
                           fontSize: 15,
@@ -229,9 +301,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
-                      child: const Text(
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
+                      child: Text(
                         'Phone Number',
                         style: TextStyle(
                           fontSize: 15,
@@ -252,9 +324,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   ],
                 ),
               const SizedBox(height: 10),
-              Align(
+              const Align(
                 alignment: Alignment.centerLeft,
-                child: const Padding(
+                child: Padding(
                   padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
                   child: Text(
                     'Password',

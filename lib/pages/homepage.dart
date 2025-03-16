@@ -183,8 +183,6 @@ class _UserHomepageState extends State<UserHomepage> {
                             places[index].data() as Map<String, dynamic>;
                         final name =
                             place['name'] as String? ?? 'Unnamed Place';
-                        final status =
-                            place['status'] as String? ?? 'available';
 
                         return GestureDetector(
                               onTap: () {
@@ -236,25 +234,7 @@ class _UserHomepageState extends State<UserHomepage> {
                                       textAlign: TextAlign.center,
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green[100],
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        status,
-                                        style: TextStyle(
-                                          color: Colors.green[800],
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
+                                    // Removed status container
                                   ],
                                 ),
                               ),
@@ -302,7 +282,7 @@ class _UserHomepageState extends State<UserHomepage> {
                     final userEmail = userProvider.userEmail ?? 'unknown';
                     final today = DateFormat(
                       'yyyy-MM-dd',
-                    ).format(DateTime.now()); // e.g., "2025-03-16"
+                    ).format(DateTime.now());
 
                     return StreamBuilder<QuerySnapshot>(
                       stream:
@@ -339,7 +319,7 @@ class _UserHomepageState extends State<UserHomepage> {
                         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                           return const Center(
                             child: Text(
-                              'No confirmed bookings for today',
+                              'No Bookings today',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.grey,
@@ -351,7 +331,7 @@ class _UserHomepageState extends State<UserHomepage> {
                         final bookings = snapshot.data!.docs;
 
                         return SizedBox(
-                          height: 200, // Height accommodates reason
+                          height: 200,
                           child: ListView.builder(
                             shrinkWrap: true,
                             itemCount: bookings.length,
@@ -412,10 +392,8 @@ class _UserHomepageState extends State<UserHomepage> {
                                             reason,
                                             style: TextStyle(
                                               color: Colors.grey.shade600,
-                                              fontSize:
-                                                  16, // Increased from 12 to 16
-                                              fontWeight:
-                                                  FontWeight.bold, // Made bold
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
                                             ),
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
@@ -441,11 +419,9 @@ class _UserHomepageState extends State<UserHomepage> {
           ),
         ),
       ),
-      const BookingListPage(), // Index 1: Bookings icon goes here
-      const Center(
-        child: Text('Notifications Page'),
-      ), // Index 2: Placeholder for Notifications
-      const SettingsPage(), // Index 3
+      const BookingListPage(),
+      const Center(child: Text('Notifications Page')),
+      const SettingsPage(),
     ];
   }
 

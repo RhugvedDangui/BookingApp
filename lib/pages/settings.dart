@@ -5,7 +5,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:test01/pages/login.dart';
 import 'package:test01/providers/user_provider.dart'; // Adjust path as needed
 
 class SettingsPage extends StatefulWidget {
@@ -35,47 +34,38 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _logout() async {
     try {
-      // Sign out from Firebase Auth
       await FirebaseAuth.instance.signOut();
-
-      // Clear Provider state
       Provider.of<UserProvider>(context, listen: false).clearUser();
-
-      // Clear SharedPreferences (optional, if you still want to use it for other settings)
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
-
       if (!mounted) return;
-      // Navigate to LoginPage and remove all previous routes
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginPage()),
         (route) => false,
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error logging out: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error logging out: $e')));
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final userEmail = Provider.of<UserProvider>(context).userEmail ?? '';
-    final userType = Provider.of<UserProvider>(context).userType ?? 'User';
+    final isAdmin = Provider.of<UserProvider>(context).isAdmin;
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 200.0,
+            expandedHeight: 220.0,
             floating: false,
             pinned: true,
             backgroundColor: Theme.of(context).colorScheme.primary,
             flexibleSpace: FlexibleSpaceBar(
-              title: const Text('Settings')
-                  .animate()
-                  .fadeIn(duration: Duration(milliseconds: 600))
-                  .scale(),
               background: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -91,7 +81,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                   ),
-                  // Add a subtle pattern overlay
                   Opacity(
                     opacity: 0.1,
                     child: Container(
@@ -109,6 +98,19 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        const SizedBox(height: 20),
+                        Text(
+                              'Settings',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                            .animate()
+                            .fadeIn(duration: const Duration(milliseconds: 600))
+                            .scale(),
+                        const SizedBox(height: 16),
                         Stack(
                           children: [
                             CircleAvatar(
@@ -116,19 +118,26 @@ class _SettingsPageState extends State<SettingsPage> {
                               backgroundColor: Colors.white.withOpacity(0.9),
                               child: CircleAvatar(
                                 radius: 42,
-                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                child: Icon(Icons.person, size: 40, color: Colors.white),
+                                backgroundColor:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.primaryContainer,
+                                child: Icon(
+                                  Icons.person,
+                                  size: 40,
+                                  color: Colors.white,
+                                ),
                               ),
                             ).animate().scale(),
                             Positioned(
                               bottom: 0,
                               right: 0,
                               child: Container(
-                                padding: EdgeInsets.all(4),
+                                padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   shape: BoxShape.circle,
-                                  boxShadow: [
+                                  boxShadow: const [
                                     BoxShadow(
                                       color: Colors.black26,
                                       blurRadius: 8,
@@ -155,7 +164,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                         ).animate().fadeIn().slideY(),
                         Text(
-                          'Account Type: $userType',
+                          'Account Type: ${isAdmin ? "Admin" : "User"}',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 14,
@@ -175,8 +184,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 24),
-                  
-                  // Account Section
                   _buildSectionHeader(context, 'Account', Icons.person_outline),
                   Card(
                     elevation: 2,
@@ -186,8 +193,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: Column(
                       children: [
                         ListTile(
-                          leading: Icon(Icons.account_circle,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.account_circle,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Profile Settings'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -196,8 +205,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: Icon(Icons.password,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.password,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Change Password'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -206,8 +217,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: Icon(Icons.security,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.security,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Two-Factor Authentication'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -217,11 +230,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ),
                   ).animate().slideX().fadeIn(),
-
                   const SizedBox(height: 24),
-                  
-                  // Appearance Section
-                  _buildSectionHeader(context, 'Appearance', Icons.palette_outlined),
+                  _buildSectionHeader(
+                    context,
+                    'Appearance',
+                    Icons.palette_outlined,
+                  ),
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -232,8 +246,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         SwitchListTile(
                           title: const Text('Dark Mode'),
                           subtitle: const Text('Toggle dark/light theme'),
-                          secondary: Icon(Icons.dark_mode,
-                              color: Theme.of(context).colorScheme.primary),
+                          secondary: Icon(
+                            Icons.dark_mode,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           value: _isDarkMode,
                           onChanged: (bool value) async {
                             final prefs = await SharedPreferences.getInstance();
@@ -245,8 +261,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: Icon(Icons.font_download,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.font_download,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Text Size'),
                           subtitle: const Text('Adjust app text size'),
                           trailing: const Icon(Icons.chevron_right),
@@ -256,8 +274,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: Icon(Icons.color_lens,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.color_lens,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Theme Colors'),
                           subtitle: const Text('Customize app colors'),
                           trailing: const Icon(Icons.chevron_right),
@@ -268,11 +288,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ),
                   ).animate().slideX().fadeIn(),
-
                   const SizedBox(height: 24),
-
-                  // Notifications Section
-                  _buildSectionHeader(context, 'Notifications', Icons.notifications_none),
+                  _buildSectionHeader(
+                    context,
+                    'Notifications',
+                    Icons.notifications_none,
+                  ),
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -282,9 +303,13 @@ class _SettingsPageState extends State<SettingsPage> {
                       children: [
                         SwitchListTile(
                           title: const Text('Push Notifications'),
-                          subtitle: const Text('Enable/disable push notifications'),
-                          secondary: Icon(Icons.notifications_active,
-                              color: Theme.of(context).colorScheme.primary),
+                          subtitle: const Text(
+                            'Enable/disable push notifications',
+                          ),
+                          secondary: Icon(
+                            Icons.notifications_active,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           value: _notificationsEnabled,
                           onChanged: (bool value) async {
                             final prefs = await SharedPreferences.getInstance();
@@ -298,8 +323,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         SwitchListTile(
                           title: const Text('Email Notifications'),
                           subtitle: const Text('Receive updates via email'),
-                          secondary: Icon(Icons.mail,
-                              color: Theme.of(context).colorScheme.primary),
+                          secondary: Icon(
+                            Icons.mail,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           value: true,
                           onChanged: (bool value) {
                             // Handle email notifications
@@ -307,8 +334,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: Icon(Icons.schedule,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.schedule,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Quiet Hours'),
                           subtitle: const Text('Set notification-free times'),
                           trailing: const Icon(Icons.chevron_right),
@@ -319,11 +348,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ),
                   ).animate().slideX().fadeIn(),
-
                   const SizedBox(height: 24),
-
-                  // Privacy & Security Section
-                  _buildSectionHeader(context, 'Privacy & Security', Icons.security),
+                  _buildSectionHeader(
+                    context,
+                    'Privacy & Security',
+                    Icons.security,
+                  ),
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -332,8 +362,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: Column(
                       children: [
                         ListTile(
-                          leading: Icon(Icons.privacy_tip,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.privacy_tip,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Privacy Settings'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -342,8 +374,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: Icon(Icons.lock,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.lock,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('App Lock'),
                           subtitle: const Text('Secure app with biometrics'),
                           trailing: const Icon(Icons.chevron_right),
@@ -353,8 +387,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: Icon(Icons.history,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.history,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Login History'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -364,10 +400,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ),
                   ).animate().slideX().fadeIn(),
-
                   const SizedBox(height: 24),
-
-                  // Support Section
                   _buildSectionHeader(context, 'Support', Icons.help_outline),
                   Card(
                     elevation: 2,
@@ -377,8 +410,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: Column(
                       children: [
                         ListTile(
-                          leading: Icon(Icons.help,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.help,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Help Center'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -387,8 +422,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: Icon(Icons.bug_report,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.bug_report,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Report a Bug'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -397,8 +434,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: Icon(Icons.feedback,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.feedback,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Send Feedback'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -408,10 +447,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ),
                   ).animate().slideX().fadeIn(),
-
                   const SizedBox(height: 24),
-
-                  // About Section
                   _buildSectionHeader(context, 'About', Icons.info_outline),
                   Card(
                     elevation: 2,
@@ -421,8 +457,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: Column(
                       children: [
                         ListTile(
-                          leading: Icon(Icons.info,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.info,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('App Info'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -431,8 +469,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: Icon(Icons.description,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.description,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Terms of Service'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -441,8 +481,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: Icon(Icons.policy,
-                              color: Theme.of(context).colorScheme.primary),
+                          leading: Icon(
+                            Icons.policy,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           title: const Text('Privacy Policy'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -452,10 +494,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ),
                   ).animate().slideX().fadeIn(),
-
                   const SizedBox(height: 32),
-
-                  // Logout Section
                   Slidable(
                     endActionPane: ActionPane(
                       motion: const ScrollMotion(),
@@ -485,8 +524,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                   ).animate().slideX().fadeIn(),
-
-                  const SizedBox(height: 24),
+                  const SizedBox(
+                    height: 16,
+                  ), // Fixed overflow by reducing from 24
                 ],
               ),
             ),
@@ -496,16 +536,16 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title,
+    IconData icon,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 24,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          Icon(icon, size: 24, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 8),
           Text(
             title,
