@@ -94,7 +94,7 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
                       ],
                     )
                     : const Icon(Icons.notifications_none_outlined, size: 26),
-            label: 'Booking List', // Changed to reflect purpose
+            label: 'Notifications', // Changed to reflect purpose
           ),
           BottomNavigationBarItem(
             icon:

@@ -84,16 +84,12 @@ class _BookingsPageState extends State<BookingsPage> {
   Future<void> _submitBooking() async {
     if (_formKey.currentState!.validate()) {
       try {
-        // Get the user's email from UserProvider
         final userEmail =
             Provider.of<UserProvider>(context, listen: false).userEmail ??
             'unknown';
-
-        // Format the dates to remove time part (store only date)
         String formattedFromDate = DateFormat('yyyy-MM-dd').format(_fromDate);
         String formattedToDate = DateFormat('yyyy-MM-dd').format(_toDate);
 
-        // Add data to Firestore including the user's email
         await FirebaseFirestore.instance.collection('bookings').add({
           'placeName': _placeNameController.text,
           'fromDate': formattedFromDate,
@@ -105,7 +101,6 @@ class _BookingsPageState extends State<BookingsPage> {
           'timestamp': FieldValue.serverTimestamp(),
         });
 
-        // Clear the form fields after successful submission
         setState(() {
           _placeNameController.clear();
           _descriptionController.clear();
@@ -157,6 +152,7 @@ class _BookingsPageState extends State<BookingsPage> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _placeNameController,
+                        enabled: false, // Makes the field uneditable
                         decoration: InputDecoration(
                           labelText: 'Place Name',
                           border: OutlineInputBorder(

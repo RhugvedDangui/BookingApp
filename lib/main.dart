@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const SignupPage(),
-        '/home': (context) => const Homepage(),
+        '/home': (context) => const UserHomepage(),
         '/booking': (context) => const BookingsPage(),
       },
       debugShowCheckedModeBanner: false,
@@ -64,7 +64,7 @@ class AuthWrapper extends StatelessWidget {
             context,
             listen: false,
           ).setUser(user.email ?? '');
-          return const AdminHomepage(); // Navigate directly to BookingsPage
+          return const UserHomepage(); // Navigate directly to BookingsPage
         } else {
           // User is not signed in
           return const LoginPage(); // Show LoginPage
