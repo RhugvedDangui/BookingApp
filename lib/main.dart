@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:test01/firebase_options.dart';
+import 'package:test01/pages/admin_HomePage.dart';
 import 'package:test01/pages/booking.dart';
 import 'package:test01/pages/homepage.dart';
 import 'package:test01/pages/login.dart';
@@ -63,7 +64,7 @@ class AuthWrapper extends StatelessWidget {
             context,
             listen: false,
           ).setUser(user.email ?? '');
-          return const Homepage(); // Navigate directly to BookingsPage
+          return const AdminHomepage(); // Navigate directly to BookingsPage
         } else {
           // User is not signed in
           return const LoginPage(); // Show LoginPage

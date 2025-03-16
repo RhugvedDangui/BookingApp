@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:test01/pages/booking.dart';
-import 'package:test01/pages/homepage.dart';
+import 'package:test01/pages/admin_homepage.dart';
 import 'package:test01/providers/user_provider.dart';
 
 class LoginPage extends StatefulWidget {
@@ -60,7 +60,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         Provider.of<UserProvider>(context, listen: false).setUser(email);
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const Homepage()),
+          MaterialPageRoute(builder: (context) => const AdminHomepage()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
