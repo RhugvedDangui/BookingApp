@@ -124,6 +124,8 @@ class _BookingListPageState extends State<BookingListPage> {
                 final date = dateFormat.parse(booking['fromDate']);
                 final startTime = booking['startTime'];
                 final endTime = booking['endTime'];
+                final reason =
+                    booking['reason'] as String? ?? 'No reason provided';
                 final status = booking['status'] ?? 'Pending';
 
                 final timeFormat = DateFormat('hh:mm a');
@@ -196,6 +198,19 @@ class _BookingListPageState extends State<BookingListPage> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Reason: $reason',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey.shade600,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           const SizedBox(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
@@ -203,7 +218,9 @@ class _BookingListPageState extends State<BookingListPage> {
                               if (!isPastStartTime)
                                 TextButton(
                                   onPressed:
-                                      status.toLowerCase() != 'cancelled'
+                                      (status.toLowerCase() != 'cancelled' &&
+                                              status.toLowerCase() !=
+                                                  'confirmed')
                                           ? () {
                                             _showCancelConfirmation(
                                               context,

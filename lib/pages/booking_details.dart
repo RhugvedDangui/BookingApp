@@ -21,6 +21,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
   late DateTime _toDate;
   late TimeOfDay _startTime;
   late TimeOfDay _endTime;
+  String _status = 'Pending';
   bool _isLoading = true;
   bool _isEditing = false;
 
@@ -64,6 +65,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
             timeFormat.parse(data['startTime']),
           );
           _endTime = TimeOfDay.fromDateTime(timeFormat.parse(data['endTime']));
+          _status = data['status'] ?? 'Pending';
           _isLoading = false;
         });
       }
@@ -123,7 +125,9 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
             .collection('bookings')
             .doc(widget.bookingId)
             .update({
-              'placeName': _placeNameController.text,
+              'placeName':
+                  _placeNameController
+                      .text, // Still included in update, but not editable
               'fromDate': dateFormat.format(_fromDate),
               'toDate': dateFormat.format(_toDate),
               'startTime': _startTime.format(context),
@@ -155,13 +159,14 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
           day: _fromDate.day,
         );
     final isPastStartTime = now.isAfter(startDateTime);
+    final isEditable = !isPastStartTime && _status.toLowerCase() != 'confirmed';
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Booking Details'),
         elevation: 0,
         actions: [
-          if (!isPastStartTime && !_isEditing)
+          if (isEditable && !_isEditing)
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () {
@@ -204,7 +209,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                                   ),
                                   prefixIcon: const Icon(Icons.place),
                                 ),
-                                enabled: _isEditing && !isPastStartTime,
+                                enabled: false, // Always disabled
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return 'Please enter a place name';
@@ -222,7 +227,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                                   ),
                                   prefixIcon: const Icon(Icons.description),
                                 ),
-                                enabled: _isEditing && !isPastStartTime,
+                                enabled: _isEditing && isEditable,
                                 maxLines: 3,
                               ),
                             ],
@@ -247,7 +252,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                               const SizedBox(height: 16),
                               InkWell(
                                 onTap:
-                                    _isEditing && !isPastStartTime
+                                    _isEditing && isEditable
                                         ? () => _selectDate(context, true)
                                         : null,
                                 child: InputDecorator(
@@ -270,7 +275,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                               const SizedBox(height: 16),
                               InkWell(
                                 onTap:
-                                    _isEditing && !isPastStartTime
+                                    _isEditing && isEditable
                                         ? () => _selectDate(context, false)
                                         : null,
                                 child: InputDecorator(
@@ -296,7 +301,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                                   Expanded(
                                     child: InkWell(
                                       onTap:
-                                          _isEditing && !isPastStartTime
+                                          _isEditing && isEditable
                                               ? () => _selectTime(context, true)
                                               : null,
                                       child: InputDecorator(
@@ -319,7 +324,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                                   Expanded(
                                     child: InkWell(
                                       onTap:
-                                          _isEditing && !isPastStartTime
+                                          _isEditing && isEditable
                                               ? () =>
                                                   _selectTime(context, false)
                                               : null,
@@ -345,7 +350,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                           ),
                         ),
                       ),
-                      if (_isEditing && !isPastStartTime) ...[
+                      if (_isEditing && isEditable) ...[
                         const SizedBox(height: 32),
                         SizedBox(
                           width: double.infinity,

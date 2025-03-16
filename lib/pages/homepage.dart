@@ -8,6 +8,7 @@ import 'package:test01/pages/booking_list.dart'; // BookingListPage
 import 'package:test01/pages/settings.dart'; // SettingsPage
 import 'package:test01/providers/user_provider.dart'; // UserProvider
 import 'package:test01/pages/place_details.dart'; // PlaceDetailsPage
+import 'package:intl/intl.dart'; // For date formatting
 
 class UserHomepage extends StatefulWidget {
   const UserHomepage({super.key});
@@ -266,7 +267,7 @@ class _UserHomepageState extends State<UserHomepage> {
                   },
                 ),
 
-                // Placeholder for Today’s Bookings (unchanged)
+                // Today's Bookings Section
                 const SizedBox(height: 25),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -296,17 +297,144 @@ class _UserHomepageState extends State<UserHomepage> {
                   ],
                 ),
                 const SizedBox(height: 15),
-                SizedBox(
-                  height: 300, // Placeholder height
-                  child: Center(
-                    child: Text(
-                      'Bookings section unchanged',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
+                Consumer<UserProvider>(
+                  builder: (context, userProvider, child) {
+                    final userEmail = userProvider.userEmail ?? 'unknown';
+                    final today = DateFormat(
+                      'yyyy-MM-dd',
+                    ).format(DateTime.now()); // e.g., "2025-03-16"
+
+                    return StreamBuilder<QuerySnapshot>(
+                      stream:
+                          FirebaseFirestore.instance
+                              .collection('bookings')
+                              .where('userEmail', isEqualTo: userEmail)
+                              .where('fromDate', isEqualTo: today)
+                              .where('status', isEqualTo: 'Confirmed')
+                              .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: Text(
+                              'Error: ${snapshot.error}',
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 16,
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.deepPurpleAccent,
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'No confirmed bookings for today',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          );
+                        }
+
+                        final bookings = snapshot.data!.docs;
+
+                        return SizedBox(
+                          height: 200, // Height accommodates reason
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: bookings.length,
+                            itemBuilder: (context, index) {
+                              final booking =
+                                  bookings[index].data()
+                                      as Map<String, dynamic>;
+                              final placeName =
+                                  booking['placeName'] as String? ??
+                                  'Unknown Place';
+                              final startTime =
+                                  booking['startTime'] as String? ?? 'N/A';
+                              final endTime =
+                                  booking['endTime'] as String? ?? 'N/A';
+                              final reason =
+                                  booking['reason'] as String? ??
+                                  'No reason provided';
+
+                              return Card(
+                                    elevation: 2,
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 5,
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(10.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.event,
+                                                color: Colors.deepPurpleAccent,
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: Text(
+                                                  placeName,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 5),
+                                          Text(
+                                            '$startTime - $endTime',
+                                            style: TextStyle(
+                                              color: Colors.grey.shade700,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 5),
+                                          Text(
+                                            reason,
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                              fontSize:
+                                                  16, // Increased from 12 to 16
+                                              fontWeight:
+                                                  FontWeight.bold, // Made bold
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                  .animate()
+                                  .fadeIn(
+                                    duration: const Duration(milliseconds: 300),
+                                  )
+                                  .slideY(begin: 0.2, end: 0);
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
               ],
             ),

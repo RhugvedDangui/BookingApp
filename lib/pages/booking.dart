@@ -19,6 +19,7 @@ class _BookingsPageState extends State<BookingsPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _placeNameController;
   late TextEditingController _descriptionController;
+  late TextEditingController _reasonController;
   DateTime _fromDate = DateTime.now();
   DateTime _toDate = DateTime.now();
   TimeOfDay _startTime = TimeOfDay.now();
@@ -33,12 +34,14 @@ class _BookingsPageState extends State<BookingsPage> {
       text: widget.initialPlaceName ?? '',
     );
     _descriptionController = TextEditingController();
+    _reasonController = TextEditingController();
   }
 
   @override
   void dispose() {
     _placeNameController.dispose();
     _descriptionController.dispose();
+    _reasonController.dispose();
     super.dispose();
   }
 
@@ -97,6 +100,7 @@ class _BookingsPageState extends State<BookingsPage> {
           'startTime': _startTime.format(context),
           'endTime': _endTime.format(context),
           'description': _descriptionController.text,
+          'reason': _reasonController.text,
           'userEmail': userEmail,
           'timestamp': FieldValue.serverTimestamp(),
         });
@@ -104,6 +108,7 @@ class _BookingsPageState extends State<BookingsPage> {
         setState(() {
           _placeNameController.clear();
           _descriptionController.clear();
+          _reasonController.clear();
           _fromDate = DateTime.now();
           _toDate = DateTime.now();
           _startTime = TimeOfDay.now();
@@ -152,7 +157,7 @@ class _BookingsPageState extends State<BookingsPage> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _placeNameController,
-                        enabled: false, // Makes the field uneditable
+                        enabled: false,
                         decoration: InputDecoration(
                           labelText: 'Place Name',
                           border: OutlineInputBorder(
@@ -276,6 +281,24 @@ class _BookingsPageState extends State<BookingsPage> {
                       Text(
                         'Additional Details',
                         style: Theme.of(context).textTheme.titleLarge,
+                      ).animate().fadeIn().slideX(),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _reasonController,
+                        decoration: InputDecoration(
+                          labelText: 'Reason for Booking',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          prefixIcon: const Icon(Icons.info),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a reason for booking';
+                          }
+                          return null;
+                        },
+                        maxLines: 2,
                       ).animate().fadeIn().slideX(),
                       const SizedBox(height: 16),
                       TextFormField(
