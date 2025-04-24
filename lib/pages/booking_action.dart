@@ -207,11 +207,82 @@ class _BookingActionPageState extends State<BookingActionPage> {
                               label: 'Description',
                               value:
                                   _bookingData!['description']?.isNotEmpty ??
-                                          false
-                                      ? _bookingData!['description']
-                                      : '-',
+                                           false
+                                       ? _bookingData!['description']
+                                       : '-',
                             ),
                             const SizedBox(height: 20),
+
+                            // Display requested facilities
+                            if (_bookingData!.containsKey('requestedFacilities') && 
+                                _bookingData!['requestedFacilities'] is List && 
+                                (_bookingData!['requestedFacilities'] as List).isNotEmpty)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.local_offer, size: 20, color: Colors.deepPurpleAccent),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'Requested Facilities:',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.grey.shade800,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 32.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: (_bookingData!['requestedFacilities'] as List).map<Widget>((facility) {
+                                        final facilityName = facility is Map ? facility['name'] ?? '' : facility.toString();
+                                        final facilityEmail = facility is Map ? facility['email'] ?? '' : '';
+                                        
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 8.0),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    facilityName,
+                                                    style: const TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              if (facilityEmail.isNotEmpty)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(left: 24.0, top: 2.0),
+                                                  child: Text(
+                                                    'Contact: $facilityEmail',
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      color: Colors.blue[700],
+                                                      fontStyle: FontStyle.italic,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            const SizedBox(height: 20),
+
                             _buildDetailRow(
                               icon: Icons.schedule,
                               label: 'Requested At',
@@ -221,7 +292,7 @@ class _BookingActionPageState extends State<BookingActionPage> {
                                         'yyyy-MM-dd HH:mm:ss',
                                       ).format(
                                         (_bookingData!['timestamp']
-                                                as Timestamp)
+                                                 as Timestamp)
                                             .toDate(),
                                       )
                                       : 'N/A',

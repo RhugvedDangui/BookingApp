@@ -1,11 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:test01/pages/booking.dart';
+import 'package:test01/pages/register.dart';
 import 'package:test01/pages/admin_homepage.dart';
-import 'package:test01/pages/homepage.dart'; // Added UserHomepage
+import 'package:test01/pages/homepage.dart';
 import 'package:test01/providers/user_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -47,11 +48,24 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   Future<bool> _isAdmin(String email) async {
     try {
+      // Check network connectivity first
+      try {
+        final result = await InternetAddress.lookup('google.com');
+        if (result.isEmpty || result[0].rawAddress.isEmpty) {
+          debugPrint('LoginPage - No internet connection');
+          return false;
+        }
+      } on SocketException catch (_) {
+        debugPrint('LoginPage - No internet connection (SocketException)');
+        return false;
+      }
+
       debugPrint('LoginPage - Checking admin status for email: "$email"');
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(email.trim())
-          .get();
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(email.trim())
+              .get();
 
       if (userDoc.exists) {
         final data = userDoc.data() as Map<String, dynamic>;
@@ -63,14 +77,17 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         debugPrint('LoginPage - No document found for email: "$email"');
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          final uidDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .get();
+          final uidDoc =
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get();
           if (uidDoc.exists) {
             final uidData = uidDoc.data() as Map<String, dynamic>;
             final isAdmin = uidData['isAdmin'] == true;
-            debugPrint('LoginPage - Firestore UID data for ${user.uid}: $uidData');
+            debugPrint(
+              'LoginPage - Firestore UID data for ${user.uid}: $uidData',
+            );
             debugPrint('LoginPage - isAdmin value (UID): $isAdmin');
             return isAdmin;
           } else {
@@ -99,26 +116,58 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     }
 
     try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
 
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+      
       if (!mounted) return;
 
       if (userCredential.user?.emailVerified ?? false) {
-        bool isAdmin = await _isAdmin(email);
-        if (!mounted) return;
+        // Check network connectivity before admin verification
+        bool hasNetwork = true;
+        try {
+          final result = await InternetAddress.lookup('google.com');
+          hasNetwork = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+        } on SocketException catch (_) {
+          hasNetwork = false;
+        }
 
-        Provider.of<UserProvider>(context, listen: false).setUser(
-          email,
-          isAdmin: isAdmin,
-        );
+        bool isAdmin = false;
+        if (hasNetwork) {
+          isAdmin = await _isAdmin(email);
+          if (!mounted) return;
+        } else {
+          // Show network error message but continue with user access
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Network unavailable. Proceeding with limited access.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
 
-        if (isAdmin) {
+        // Only update provider after successful verification
+        Provider.of<UserProvider>(
+          context,
+          listen: false,
+        ).setUser(email, isAdmin: isAdmin);
+
+        if (isAdmin && hasNetwork) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const AdminHomepage()),
           );
         } else {
+          // Default to user homepage if not admin or no network
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const UserHomepage()),
@@ -134,6 +183,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         }
       }
     } on FirebaseAuthException catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+      
       if (!mounted) return;
       print('FirebaseAuthException: ${e.code} - ${e.message}');
       switch (e.code) {
@@ -143,9 +195,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           );
           break;
         case 'wrong-password':
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Incorrect password.')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Incorrect password.')));
           break;
         case 'invalid-email':
           ScaffoldMessenger.of(context).showSnackBar(
@@ -167,9 +219,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           );
           break;
         default:
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login failed: ${e.message}')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Login failed: ${e.message}')));
       }
     } catch (e) {
       if (!mounted) return;
@@ -206,9 +258,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           const SnackBar(content: Text('No user found with that email.')),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
       }
     }
   }
@@ -364,7 +416,17 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               Row(
                 children: [
                   const Text("Don't have an account?"),
-                  TextButton(onPressed: () {}, child: const Text('Sign Up')),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SignupPage(),
+                        ),
+                      );
+                    },
+                    child: const Text('Sign Up'),
+                  ),
                 ],
               ),
               const SizedBox(height: 25),

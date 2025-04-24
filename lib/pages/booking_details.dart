@@ -25,6 +25,12 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
   bool _isLoading = true;
   bool _isEditing = false;
 
+  // Add state variables for facilities
+  List<Map<String, dynamic>> _availableFacilities = [];
+  List<Map<String, dynamic>> _requestedFacilities = [];
+  bool _isLoadingFacilities = false;
+  String _placeId = '';
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +62,27 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
         final dateFormat = DateFormat('yyyy-MM-dd');
         final timeFormat = DateFormat('hh:mm a');
 
+        // Get place ID for fetching available facilities
+        _placeId = data['placeId'] ?? '';
+
+        // Process requested facilities
+        List<Map<String, dynamic>> requestedFacilities = [];
+        if (data.containsKey('requestedFacilities') && data['requestedFacilities'] is List) {
+          for (var facility in data['requestedFacilities']) {
+            if (facility is Map) {
+              requestedFacilities.add({
+                'name': facility['name']?.toString() ?? '',
+                'email': facility['email']?.toString() ?? '',
+              });
+            } else if (facility is String) {
+              requestedFacilities.add({
+                'name': facility,
+                'email': '',
+              });
+            }
+          }
+        }
+
         setState(() {
           _placeNameController.text = data['placeName'] ?? '';
           _descriptionController.text = data['description'] ?? '';
@@ -66,14 +93,57 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
           );
           _endTime = TimeOfDay.fromDateTime(timeFormat.parse(data['endTime']));
           _status = data['status'] ?? 'Pending';
+          _requestedFacilities = requestedFacilities;
           _isLoading = false;
         });
+
+        // Fetch available facilities for the place if we have a place ID
+        if (_placeId.isNotEmpty) {
+          _fetchPlaceFacilities();
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error fetching booking: $e')));
       setState(() => _isLoading = false);
+    }
+  }
+
+  // Add method to fetch facilities for the place
+  Future<void> _fetchPlaceFacilities() async {
+    try {
+      final placeDoc = await FirebaseFirestore.instance
+          .collection('places')
+          .doc(_placeId)
+          .get();
+
+      if (placeDoc.exists) {
+        final placeData = placeDoc.data() as Map<String, dynamic>;
+        final facilities = placeData['facilities'] ?? [];
+
+        List<Map<String, dynamic>> availableFacilities = [];
+        for (var facility in facilities) {
+          if (facility is Map) {
+            availableFacilities.add({
+              'name': facility['name']?.toString() ?? '',
+              'email': facility['email']?.toString() ?? '',
+            });
+          } else if (facility is String) {
+            availableFacilities.add({
+              'name': facility,
+              'email': '',
+            });
+          }
+        }
+
+        setState(() {
+          _availableFacilities = availableFacilities;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching facilities: $e')));
     }
   }
 
@@ -125,14 +195,13 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
             .collection('bookings')
             .doc(widget.bookingId)
             .update({
-              'placeName':
-                  _placeNameController
-                      .text, // Still included in update, but not editable
+              'placeName': _placeNameController.text,
               'fromDate': dateFormat.format(_fromDate),
               'toDate': dateFormat.format(_toDate),
               'startTime': _startTime.format(context),
               'endTime': _endTime.format(context),
               'description': _descriptionController.text,
+              'requestedFacilities': _requestedFacilities,
               'timestamp': FieldValue.serverTimestamp(),
             });
         setState(() => _isEditing = false);
@@ -145,6 +214,33 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
         ).showSnackBar(SnackBar(content: Text('Error updating booking: $e')));
       }
     }
+  }
+
+  bool _isFacilitySelected(String facilityName) {
+    return _requestedFacilities.any((f) => f['name'] == facilityName);
+  }
+
+  void _toggleFacility(Map<String, dynamic> facility) {
+    setState(() {
+      final index = _requestedFacilities.indexWhere((f) => f['name'] == facility['name']);
+      if (index >= 0) {
+        _requestedFacilities.removeAt(index);
+      } else {
+        _requestedFacilities.add(facility);
+      }
+    });
+  }
+
+  Widget _buildFacilityItem(Map<String, dynamic> facility) {
+    return ListTile(
+      title: Text(facility['name'] ?? ''),
+      trailing: _isEditing
+          ? Checkbox(
+              value: _requestedFacilities.any((f) => f['name'] == facility['name']),
+              onChanged: (value) => _toggleFacility(facility),
+            )
+          : null,
+    );
   }
 
   @override
@@ -346,6 +442,39 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                                   ),
                                 ],
                               ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Facilities',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 16),
+                              if (_isLoadingFacilities)
+                                const Center(child: CircularProgressIndicator())
+                              else if (_availableFacilities.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                                  child: Text('No facilities available for this place'),
+                                )
+                              else
+                                Column(
+                                  children: _availableFacilities
+                                      .map((facility) => _buildFacilityItem(facility))
+                                      .toList(),
+                                ),
                             ],
                           ),
                         ),

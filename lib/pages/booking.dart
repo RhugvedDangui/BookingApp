@@ -26,6 +26,12 @@ class _BookingsPageState extends State<BookingsPage> {
   TimeOfDay _endTime = TimeOfDay.now().replacing(
     hour: TimeOfDay.now().hour + 1,
   );
+  
+  // Lists to track available and selected facilities
+  List<Map<String, String>> _availableFacilities = [];
+  List<Map<String, String>> _selectedFacilities = [];
+  bool _isLoadingFacilities = false;
+  String? _placeId; // Add place ID variable
 
   @override
   void initState() {
@@ -35,6 +41,116 @@ class _BookingsPageState extends State<BookingsPage> {
     );
     _descriptionController = TextEditingController();
     _reasonController = TextEditingController();
+    
+    // If a place is pre-selected, fetch its facilities
+    if (widget.initialPlaceName != null && widget.initialPlaceName!.isNotEmpty) {
+      _fetchPlaceFacilities(widget.initialPlaceName!);
+    }
+  }
+
+  // Fetch facilities for the selected place
+  Future<void> _fetchPlaceFacilities(String placeName) async {
+    setState(() {
+      _isLoadingFacilities = true;
+    });
+    
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('places')
+          .where('name', isEqualTo: placeName)
+          .limit(1)
+          .get();
+      
+      if (querySnapshot.docs.isNotEmpty) {
+        final placeData = querySnapshot.docs.first.data();
+        final placeId = querySnapshot.docs.first.id; // Get the place ID
+        
+        // Store the place ID in the state
+        setState(() {
+          _placeId = placeId;
+        });
+        
+        if (placeData.containsKey('facilities') && placeData['facilities'] is List) {
+          final facilitiesList = placeData['facilities'];
+          
+          if (facilitiesList.isNotEmpty) {
+            // Convert facilities to Map<String, String> format
+            final facilities = facilitiesList.map<Map<String, String>>((dynamic facility) {
+              if (facility is Map) {
+                return {
+                  'name': facility['name']?.toString() ?? '',
+                  'email': facility['email']?.toString() ?? '',
+                };
+              } else if (facility is String) {
+                return {
+                  'name': facility,
+                  'email': '',
+                };
+              }
+              return {'name': '', 'email': ''};
+            }).where((Map<String, String> facility) => facility['name']!.isNotEmpty).toList();
+            
+            setState(() {
+              _availableFacilities = facilities;
+              _isLoadingFacilities = false;
+            });
+          } else {
+            setState(() {
+              _availableFacilities = [];
+              _isLoadingFacilities = false;
+            });
+          }
+        } else {
+          setState(() {
+            _availableFacilities = [];
+            _isLoadingFacilities = false;
+          });
+        }
+      } else {
+        setState(() {
+          _availableFacilities = [];
+          _isLoadingFacilities = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching facilities: $e');
+      setState(() {
+        _availableFacilities = [];
+        _isLoadingFacilities = false;
+      });
+    }
+  }
+  
+  // Toggle facility selection
+  void _toggleFacility(Map<String, String> facility) {
+    setState(() {
+      // Check if the facility is already selected (by name)
+      final index = _selectedFacilities.indexWhere((f) => f['name'] == facility['name']);
+      
+      if (index >= 0) {
+        // If already selected, remove it
+        _selectedFacilities.removeAt(index);
+      } else {
+        // Otherwise add it
+        _selectedFacilities.add(facility);
+      }
+    });
+  }
+
+  Widget _buildFacilityChip(Map<String, String> facility) {
+    return FilterChip(
+      label: Text(facility['name'] ?? ''),
+      selected: _selectedFacilities.any((f) => f['name'] == facility['name']),
+      onSelected: (selected) {
+        setState(() {
+          if (selected) {
+            _selectedFacilities.add(facility);
+          } else {
+            _selectedFacilities.removeWhere((f) => f['name'] == facility['name']);
+          }
+        });
+      },
+    );
   }
 
   @override
@@ -95,6 +211,7 @@ class _BookingsPageState extends State<BookingsPage> {
 
         await FirebaseFirestore.instance.collection('bookings').add({
           'placeName': _placeNameController.text,
+          'placeId': _placeId, // Add place ID to booking submission
           'fromDate': formattedFromDate,
           'toDate': formattedToDate,
           'startTime': _startTime.format(context),
@@ -102,6 +219,7 @@ class _BookingsPageState extends State<BookingsPage> {
           'description': _descriptionController.text,
           'reason': _reasonController.text,
           'userEmail': userEmail,
+          'requestedFacilities': _selectedFacilities, // Save selected facilities with emails
           'timestamp': FieldValue.serverTimestamp(),
         });
 
@@ -113,6 +231,7 @@ class _BookingsPageState extends State<BookingsPage> {
           _toDate = DateTime.now();
           _startTime = TimeOfDay.now();
           _endTime = TimeOfDay.now().replacing(hour: TimeOfDay.now().hour + 1);
+          _selectedFacilities = []; // Clear selected facilities
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -176,6 +295,113 @@ class _BookingsPageState extends State<BookingsPage> {
                   ),
                 ),
               ).animate().scale(),
+
+              const SizedBox(height: 16),
+              
+              // Facilities selection card
+              if (_availableFacilities.isNotEmpty)
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Select Facilities',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ).animate().fadeIn().slideX(),
+                        const SizedBox(height: 16),
+                        _isLoadingFacilities
+                            ? const Center(child: CircularProgressIndicator())
+                            : Column(
+                                children: [
+                                  Text(
+                                    'Select the facilities you need:',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: _availableFacilities.map((facility) {
+                                      return _buildFacilityChip(facility);
+                                    }).toList(),
+                                  ),
+                                  if (_selectedFacilities.isNotEmpty) ...[
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue[50],
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.blue[100]!),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Selected Facilities:',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.blue[800],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          ListView.builder(
+                                            shrinkWrap: true,
+                                            physics: const NeverScrollableScrollPhysics(),
+                                            itemCount: _selectedFacilities.length,
+                                            itemBuilder: (context, index) {
+                                              final facility = _selectedFacilities[index];
+                                              return Padding(
+                                                padding: const EdgeInsets.only(bottom: 4),
+                                                child: Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Icon(Icons.check, size: 16, color: Colors.green[700]),
+                                                    const SizedBox(width: 4),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(
+                                                            facility['name'] ?? '',
+                                                            style: const TextStyle(fontWeight: FontWeight.bold),
+                                                          ),
+                                                          if (facility['email'] != null && facility['email']!.isNotEmpty)
+                                                            Padding(
+                                                              padding: const EdgeInsets.only(top: 2),
+                                                              child: Text(
+                                                                'Contact: ${facility['email']}',
+                                                                style: TextStyle(
+                                                                  fontSize: 12,
+                                                                  color: Colors.blue[700],
+                                                                  fontStyle: FontStyle.italic,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                      ],
+                    ),
+                  ),
+                ).animate().scale(),
 
               const SizedBox(height: 16),
 

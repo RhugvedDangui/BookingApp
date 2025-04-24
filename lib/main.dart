@@ -12,6 +12,7 @@ import 'package:test01/pages/admin_homepage.dart';
 import 'package:test01/providers/user_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io'; // Import for network connectivity check
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,11 +50,32 @@ class MyApp extends StatelessWidget {
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
+  // Check network connectivity
+  Future<bool> _hasNetworkConnection() async {
+    try {
+      final result = await InternetAddress.lookup('google.com');
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } on SocketException catch (_) {
+      debugPrint('No internet connection available');
+      return false;
+    }
+  }
+
   Future<bool> _isAdmin(String? email) async {
     if (email == null) {
       debugPrint('Email is null, returning false');
       return false;
     }
+    
+    // Check for network connectivity first
+    bool hasNetwork = await _hasNetworkConnection();
+    if (!hasNetwork) {
+      debugPrint('No network connection, skipping Firestore admin check');
+      // Return the cached admin status from provider if available
+      // This will be handled by the caller
+      return false;
+    }
+    
     try {
       debugPrint('Checking admin status for email: "$email"');
       final userDoc = await FirebaseFirestore.instance
@@ -106,32 +128,73 @@ class AuthWrapper extends StatelessWidget {
         if (snapshot.hasData) {
           final user = snapshot.data!;
           debugPrint('User signed in: "${user.email}"');
-
+          
+          // Get the UserProvider to check for cached admin status
+          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          
           return FutureBuilder<bool>(
-            future: _isAdmin(user.email),
-            builder: (context, adminSnapshot) {
-              if (adminSnapshot.connectionState == ConnectionState.waiting) {
+            future: _hasNetworkConnection(),
+            builder: (context, networkSnapshot) {
+              // If we have network issues, use the cached admin status
+              if (networkSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
                   body: Center(child: CircularProgressIndicator()),
                 );
               }
-              if (adminSnapshot.hasError) {
-                debugPrint('Admin check error: ${adminSnapshot.error}');
-                return const UserHomepage();
+              
+              final hasNetwork = networkSnapshot.data ?? false;
+              
+              // If no network, use the cached admin status from UserProvider
+              if (!hasNetwork) {
+                debugPrint('No network connection, using cached admin status: ${userProvider.isAdmin}');
+                
+                // If email matches and we have cached admin status, use it
+                if (userProvider.userEmail == user.email) {
+                  final isAdmin = userProvider.isAdmin;
+                  
+                  if (isAdmin) {
+                    return const AdminHomepage();
+                  } else {
+                    return const UserHomepage();
+                  }
+                } else {
+                  // If email doesn't match cached data, default to user homepage
+                  debugPrint('Email mismatch or no cached data, defaulting to user homepage');
+                  return const UserHomepage();
+                }
               }
-              final isAdmin = adminSnapshot.data ?? false;
-              debugPrint('Redirecting - isAdmin: $isAdmin');
+              
+              // If we have network, proceed with Firestore check
+              return FutureBuilder<bool>(
+                future: _isAdmin(user.email),
+                builder: (context, adminSnapshot) {
+                  if (adminSnapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  if (adminSnapshot.hasError) {
+                    debugPrint('Admin check error: ${adminSnapshot.error}');
+                    return const UserHomepage();
+                  }
+                  final isAdmin = adminSnapshot.data ?? false;
+                  debugPrint('Redirecting - isAdmin: $isAdmin');
 
-              Provider.of<UserProvider>(context, listen: false).setUser(
-                user.email ?? '',
-                isAdmin: isAdmin,
+                  // Use post-frame callback to avoid calling setUser during build
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    Provider.of<UserProvider>(context, listen: false).setUser(
+                      user.email ?? '',
+                      isAdmin: isAdmin,
+                    );
+                  });
+
+                  if (isAdmin) {
+                    return const AdminHomepage();
+                  } else {
+                    return const UserHomepage();
+                  }
+                },
               );
-
-              if (isAdmin) {
-                return const AdminHomepage();
-              } else {
-                return const UserHomepage();
-              }
             },
           );
         } else {

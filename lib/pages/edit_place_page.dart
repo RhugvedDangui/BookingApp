@@ -22,8 +22,13 @@ class _EditPlacePageState extends State<EditPlacePage> {
   late final TextEditingController _detailsController;
   late final TextEditingController _capacityController;
   late final TextEditingController _locationController;
+  late final TextEditingController _facilityController; // Controller for facility name
+  late final TextEditingController _facilityEmailController; // Controller for facility email
   late String _status;
   bool _isSaving = false;
+  
+  // Updated to store facility objects with name and email
+  List<Map<String, String>> _facilities = [];
 
   @override
   void initState() {
@@ -41,12 +46,69 @@ class _EditPlacePageState extends State<EditPlacePage> {
     _locationController = TextEditingController(
       text: widget.initialData['location'] ?? '',
     );
+    _facilityController = TextEditingController(); // Initialize facility controller
+    _facilityEmailController = TextEditingController(); // Initialize facility email controller
+    
+    // Load existing facilities if available
+    if (widget.initialData.containsKey('facilities')) {
+      if (widget.initialData['facilities'] is List) {
+        final facilitiesList = widget.initialData['facilities'] as List;
+        
+        // Check if facilities are stored as maps or strings
+        if (facilitiesList.isNotEmpty) {
+          if (facilitiesList.first is Map) {
+            // If facilities are already stored as maps with name and email
+            _facilities = facilitiesList.map<Map<String, String>>((facility) {
+              // Safely convert from Map<String, dynamic> to Map<String, String>
+              return {
+                'name': (facility['name'] ?? '').toString(),
+                'email': (facility['email'] ?? '').toString(),
+              };
+            }).toList();
+          } else if (facilitiesList.first is String) {
+            // If facilities are stored as simple strings (old format), convert to new format
+            _facilities = facilitiesList.map<Map<String, String>>((facility) {
+              return {
+                'name': facility.toString(),
+                'email': '',
+              };
+            }).toList();
+          }
+        }
+      }
+    }
+    
     // Normalize status to match dropdown options
     final initialStatus = widget.initialData['status'] ?? 'available';
     _status =
         (initialStatus == 'unavailable' || initialStatus == 'not available')
             ? 'not available'
             : 'available';
+  }
+
+  // Add a facility to the list
+  void _addFacility() {
+    final facility = _facilityController.text.trim();
+    final email = _facilityEmailController.text.trim();
+    
+    if (facility.isNotEmpty) {
+      setState(() {
+        // Add facility with email (email can be empty)
+        _facilities.add({
+          'name': facility,
+          'email': email,
+        });
+        _facilityController.clear();
+        _facilityEmailController.clear();
+      });
+    }
+  }
+
+  // Remove a facility from the list
+  void _removeFacility(int index) {
+    setState(() {
+      _facilities.removeAt(index);
+    });
   }
 
   Future<void> _savePlace() async {
@@ -59,9 +121,11 @@ class _EditPlacePageState extends State<EditPlacePage> {
           'capacity': int.parse(_capacityController.text.trim()),
           'location': _locationController.text.trim(),
           'status': _status,
+          'facilities': _facilities, // Save facilities with emails to Firestore
           'createdAt':
               widget.initialData['createdAt'] ??
               Timestamp.now(), // Preserve original timestamp
+          'updatedAt': Timestamp.now(), // Add update timestamp
         };
 
         await FirebaseFirestore.instance
@@ -88,6 +152,8 @@ class _EditPlacePageState extends State<EditPlacePage> {
     _detailsController.dispose();
     _capacityController.dispose();
     _locationController.dispose();
+    _facilityController.dispose();
+    _facilityEmailController.dispose(); // Dispose facility email controller
     super.dispose();
   }
 
@@ -242,6 +308,128 @@ class _EditPlacePageState extends State<EditPlacePage> {
                       duration: const Duration(milliseconds: 300),
                     ),
                     const SizedBox(height: 16),
+                    // New card for facilities
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Facilities',
+                              style: Theme.of(context).textTheme.titleLarge!.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueAccent,
+                              ),
+                            ).animate().fadeIn(
+                              duration: const Duration(milliseconds: 300),
+                            ).slideX(),
+                            const SizedBox(height: 16),
+                            
+                            // Facility name field
+                            TextFormField(
+                              controller: _facilityController,
+                              decoration: InputDecoration(
+                                labelText: 'Facility Name',
+                                hintText: 'e.g., WiFi, Parking, Cafeteria',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                prefixIcon: const Icon(Icons.local_offer, color: Colors.grey),
+                              ),
+                            ).animate().fadeIn(duration: const Duration(milliseconds: 300)).slideX(),
+                            
+                            const SizedBox(height: 12),
+                            
+                            // Facility email field
+                            TextFormField(
+                              controller: _facilityEmailController,
+                              decoration: InputDecoration(
+                                labelText: 'Contact Email (Optional)',
+                                hintText: 'e.g., facility.manager@example.com',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                prefixIcon: const Icon(Icons.email, color: Colors.grey),
+                              ),
+                              keyboardType: TextInputType.emailAddress,
+                            ).animate().fadeIn(duration: const Duration(milliseconds: 300)).slideX(),
+                            
+                            const SizedBox(height: 12),
+                            
+                            // Add facility button
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _addFacility,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add Facility'),
+                                style: ElevatedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  backgroundColor: Colors.green,
+                                ),
+                              ),
+                            ).animate().fadeIn(duration: const Duration(milliseconds: 300)).slideX(),
+                            
+                            const SizedBox(height: 16),
+                            
+                            if (_facilities.isNotEmpty) ...[
+                              Text(
+                                'Current Facilities:',
+                                style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _facilities.length,
+                                itemBuilder: (context, index) {
+                                  final facility = _facilities[index];
+                                  return Card(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    color: Colors.blue[50],
+                                    child: ListTile(
+                                      title: Text(
+                                        facility['name'] ?? '',
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      subtitle: facility['email']!.isNotEmpty
+                                          ? Text('Contact: ${facility['email']}')
+                                          : const Text('No contact email provided', style: TextStyle(fontStyle: FontStyle.italic)),
+                                      trailing: IconButton(
+                                        icon: const Icon(Icons.delete, color: Colors.red),
+                                        onPressed: () => _removeFacility(index),
+                                      ),
+                                      leading: const Icon(Icons.local_offer, color: Colors.blue),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ] else
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Text(
+                                    'No facilities added yet',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Card(
                       elevation: 4,
                       shape: RoundedRectangleBorder(
@@ -349,9 +537,25 @@ class _EditPlacePageState extends State<EditPlacePage> {
             ),
             if (_isSaving)
               Container(
-                color: Colors.black.withOpacity(0.5),
-                child: const Center(child: CircularProgressIndicator()),
+                color: Colors.black.withOpacity(0.3),
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
               ),
+            // Back button
+            Positioned(
+              top: 40,
+              left: 16,
+              child: SafeArea(
+                child: CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.blueAccent),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -198,7 +198,6 @@ class _BookingListPageState extends State<BookingListPage> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
                           Text(
                             'Reason: $reason',
                             style: Theme.of(
@@ -211,6 +210,54 @@ class _BookingListPageState extends State<BookingListPage> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          
+                          // Display requested facilities
+                          if (booking.containsKey('requestedFacilities') && 
+                              booking['requestedFacilities'] is List && 
+                              (booking['requestedFacilities'] as List).isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.local_offer, size: 16, color: Colors.deepPurple),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Facilities:',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey.shade700,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 8,
+                                    children: (booking['requestedFacilities'] as List).map<Widget>((facility) {
+                                      final facilityName = facility is Map ? facility['name'] ?? '' : facility.toString();
+                                      if (facilityName.isEmpty) return const SizedBox.shrink();
+                                      
+                                      return Chip(
+                                        label: Text(
+                                          facilityName,
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                        backgroundColor: Colors.deepPurple.withOpacity(0.1),
+                                        labelStyle: const TextStyle(color: Colors.deepPurple),
+                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        visualDensity: VisualDensity.compact,
+                                        padding: EdgeInsets.zero,
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          
                           const SizedBox(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
